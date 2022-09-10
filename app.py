@@ -179,6 +179,7 @@ def testWER():
     print('Accuracy of Deep Speech using WER:', modelErr_DeepSpeech)
     return modelErr_Assembly, modelErr_DeepSpeech
 
+
 #words are in order of appearance,document2 should be the original one
 def compare2DocumentsText(wordsInDocument1,wordsInDocument2):
     result = []
@@ -186,6 +187,13 @@ def compare2DocumentsText(wordsInDocument1,wordsInDocument2):
     index2 = 0
     lenWordsDoc1 = len(wordsInDocument1)
     lenWordsDoc2 = len(wordsInDocument2)
+    doc2WordsDict = {}
+    for elem in wordsInDocument2:
+        if str(elem) in doc2WordsDict:
+            doc2WordsDict[str(elem)] += 1
+        else:
+            doc2WordsDict[str(elem)] = 1
+    print(doc2WordsDict)
     # document: ,word: ,status: wrong,missing,correct
     while index1 < lenWordsDoc1 and index2 < lenWordsDoc2:
         wordDoc2 = wordsInDocument2[index2]
@@ -195,10 +203,11 @@ def compare2DocumentsText(wordsInDocument1,wordsInDocument2):
 
         if  wordDoc1 == wordDoc2:
             docWord.status = WordStatus.CORRECT.value
+            doc2WordsDict[wordDoc1] = doc2WordsDict[wordDoc1] - 1
             index1 += 1
             index2 += 1
         else:
-            if wordDoc1 == wordsInDocument2[index2 + 1]:
+            if (wordDoc1 in doc2WordsDict) and doc2WordsDict[wordDoc1] > 0: # wordDoc1 == wordsInDocument2[index2 + 1]
                 docWord.status = WordStatus.MISSING.value[0]
                 index2 += 1
             else:
@@ -209,8 +218,9 @@ def compare2DocumentsText(wordsInDocument1,wordsInDocument2):
     while index2 < lenWordsDoc2:
         docWord = DocumentWord()
         docWord.word = wordsInDocument2[index2]
-        docWord.status = WordStatus.MISSING
+        docWord.status = WordStatus.MISSING.value[0]
         index2 += 1
+        result.append(docWord)
     return result
 
 
