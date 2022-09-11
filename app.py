@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 import os
 from speech2Text.service import service
 from speech2Text.utils.utility_classes import DocumentWord,WordStatus
+import string
 app = Flask(__name__)
 
 
@@ -44,7 +45,9 @@ def compareDocuments():
     wordsDocument1 = getWordsListFromDocument(filePathDoc1)
     wordsDocument2 = getWordsListFromDocument(filePathDoc2)
     result = compare2DocumentsText(wordsDocument1,wordsDocument2)
-    json_string = json.dumps([ob.__dict__ for ob in result])
+    resultDictionary = [ob.__dict__ for ob in result]
+    endpointResult = {"evaluation":resultDictionary,"transcribedWords":wordsDocument1,"originalWords":wordsDocument2}
+    json_string = json.dumps(endpointResult)
     return json_string
 
 
@@ -236,7 +239,7 @@ def getWordsListFromDocument(documentPath):
     with open(documentPath, 'r') as file:
         for line in file:
             for word in line.split():
-                result.append(word.lower())
+                result.append(word.lower().translate(str.maketrans('', '', string.punctuation)))
     return result
 
 
