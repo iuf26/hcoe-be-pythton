@@ -182,6 +182,14 @@ def testWER():
     print('Accuracy of Deep Speech using WER:', modelErr_DeepSpeech)
     return modelErr_Assembly, modelErr_DeepSpeech
 
+def getWordsDict(wordsList):
+    result = {}
+    for elem in wordsList:
+        if str(elem) in result:
+            result[str(elem)] += 1
+        else:
+            result[str(elem)] = 1
+    return result
 
 #words are in order of appearance,document2 should be the original one
 def compare2DocumentsText(wordsInDocument1,wordsInDocument2):
@@ -190,13 +198,10 @@ def compare2DocumentsText(wordsInDocument1,wordsInDocument2):
     index2 = 0
     lenWordsDoc1 = len(wordsInDocument1)
     lenWordsDoc2 = len(wordsInDocument2)
-    doc2WordsDict = {}
-    for elem in wordsInDocument2:
-        if str(elem) in doc2WordsDict:
-            doc2WordsDict[str(elem)] += 1
-        else:
-            doc2WordsDict[str(elem)] = 1
-    print(doc2WordsDict)
+    doc1WordsDict = getWordsDict(wordsInDocument1)
+    doc2WordsDict = getWordsDict(wordsInDocument2)
+
+
     # document: ,word: ,status: wrong,missing,correct
     while index1 < lenWordsDoc1 and index2 < lenWordsDoc2:
         wordDoc2 = wordsInDocument2[index2]
@@ -207,11 +212,15 @@ def compare2DocumentsText(wordsInDocument1,wordsInDocument2):
         if  wordDoc1 == wordDoc2:
             docWord.status = WordStatus.CORRECT.value
             doc2WordsDict[wordDoc1] = doc2WordsDict[wordDoc1] - 1
+            doc1WordsDict[wordDoc1] = doc1WordsDict[wordDoc1] - 1
             index1 += 1
             index2 += 1
         else:
             if (wordDoc1 in doc2WordsDict) and doc2WordsDict[wordDoc1] > 0: # wordDoc1 == wordsInDocument2[index2 + 1]
-                docWord.status = WordStatus.MISSING.value[0]
+                if not(doc1WordsDict[wordDoc1] > 0):
+                    docWord.status = WordStatus.MISSING.value[0]
+                else:
+                    doc1WordsDict[wordDoc1] = doc1WordsDict[wordDoc1]  - 1
                 index2 += 1
             else:
                 docWord.status = WordStatus.WRONG.value[0]
