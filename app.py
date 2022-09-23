@@ -18,7 +18,8 @@ def uploadfile(section):
     api_to_use = request.view_args['section']
     if request.method == 'POST':
         f = request.files['file']
-        filePath = "./speech2Text/audio/" + secure_filename(f.filename)
+        filename = f.filename
+        filePath = "./speech2Text/audio/" + secure_filename(filename)
         f.save(filePath)
         textConversionResult = request.values['destination-file-name']
         data, error = "", ""
@@ -29,6 +30,9 @@ def uploadfile(section):
                 data, error = service.convert_to_text(filePath, textConversionResult, 1)
         # response_file = 'speech2Text/savings/' + textConversionResult + ".txt"
         if data:
+            txtFilename = filename.split(".")[0] + ".txt"
+            realTxtPath = 'speech2Text/translations/' + txtFilename
+            newTestWER(realTxtPath, 'speech2Text/savings/transcription.txt')
             return data
         else:
             return error
@@ -62,11 +66,11 @@ def testApis():
     return json.dumps(value)
 
 
+
 def recognizeText(filename, api):
     filePath = "./speech2Text/dataset1/" + secure_filename(filename)
     print("In here recognize text with api")
     data, error = service.convert_to_text(filePath, "wer.txt", api)
-
     if data:
         if api == 1:
             return data
@@ -101,6 +105,16 @@ def loadComputedOutput(api):
 
             output.append(to_add)
     return output
+
+
+def getWordsList(filename):
+    res = []
+    with open(filename) as f:
+        lines = f.readlines()
+        for line in lines:
+            low = line.lower()
+            res.append(low[:len(low) - 1])
+    return res
 
 
 # !/usr/bin/env python
@@ -152,6 +166,7 @@ def wer(r, h):
     return d[len(r)][len(h)]
 
 
+
 def getError(realOut, computedOut):
     print("Calculating error-----")
     print(computedOut)
@@ -167,6 +182,23 @@ def getError(realOut, computedOut):
         i = i + 1
     print("Done calculating error---- ")
     return totalError / len(realOut)
+
+
+def computeError(realOut, computedOut):
+    print("Calculating error-----")
+    print(realOut)
+    print(computedOut)
+    tempWer = wer(realOut, computedOut)
+    err = tempWer / len(realOut)
+    print("Done calculating error------"
+          "Error is {}".format(err))
+    return err
+
+
+def newTestWER(realFilename, computedFilename):
+    realOut = getWordsList(realFilename)
+    computedOut = getWordsList(computedFilename)
+    computeError(realOut, computedOut)
 
 
 def testWER():
@@ -236,13 +268,6 @@ def compare2DocumentsText(wordsInDocument1,wordsInDocument2):
     return result
 
 
-
-
-
-
-
-
-
 def getWordsListFromDocument(documentPath):
     result = []
     with open(documentPath, 'r') as file:
@@ -250,7 +275,6 @@ def getWordsListFromDocument(documentPath):
             for word in line.split():
                 result.append(word.lower().translate(str.maketrans('', '', string.punctuation)))
     return result
-
 
 if __name__ == '__main__':
     app.run()
