@@ -1,8 +1,9 @@
-from flask import Flask, request,  json
+from flask import Flask, request, json
 from werkzeug.utils import secure_filename
 import os
 from speech2Text.service import service
-
+from speech2Text.utils.utility_classes import DocumentWord,WordStatus
+import string
 app = Flask(__name__)
 
 
@@ -21,24 +22,39 @@ def uploadfile(section):
         filePath = "./speech2Text/audio/" + secure_filename(filename)
         f.save(filePath)
         textConversionResult = request.values['destination-file-name']
-        data,error = "",""
+        data, error = "", ""
         if api_to_use == "assembly":
-            data, error = service.convert_to_text(filePath, textConversionResult,0)
+            data, error = service.convert_to_text(filePath, textConversionResult, 0)
         else:
             if api_to_use == "deepgram":
                 data, error = service.convert_to_text(filePath, textConversionResult, 1)
-        # response_file = 'speech2Text/savings/' + textConversionResult + ".txt"
+        os.remove(filePath)
         if data:
-            txtFilename = filename.split(".")[0] + ".txt"
-            realTxtPath = 'speech2Text/translations/' + txtFilename
-            newTestWER(realTxtPath, 'speech2Text/savings/transcription.txt')
             return data
         else:
             return error
 
+
+@app.route('/compare-documents', methods=['POST'])
+def compareDocuments():
+    doc1 = request.files['doc1']
+    doc2 = request.files['doc2']
+    filePathDoc1 = "./speech2Text/savings/" + secure_filename("document1")
+    filePathDoc2 = "./speech2Text/savings/" + secure_filename("document2")
+    doc1.save(filePathDoc1)
+    doc2.save(filePathDoc2)
+    wordsDocument1 = getWordsListFromDocument(filePathDoc1)
+    wordsDocument2 = getWordsListFromDocument(filePathDoc2)
+    result = compare2DocumentsText(wordsDocument1,wordsDocument2)
+    resultDictionary = [ob.__dict__ for ob in result]
+    endpointResult = {"evaluation":resultDictionary,"transcribedWords":wordsDocument1,"originalWords":wordsDocument2}
+    json_string = json.dumps(endpointResult)
+    return json_string
+
+
 @app.route('/test-apis', methods=['GET'])
 def testApis():
-    api_Asssembly,api_DSpeech = testWER()
+    api_Asssembly, api_DSpeech = testWER()
     value = {
         "Assembly-Ai": api_Asssembly,
         "Deep-Speech": api_DSpeech
@@ -47,11 +63,11 @@ def testApis():
     return json.dumps(value)
 
 
-def recognizeText(filename,api):
+
+def recognizeText(filename, api):
     filePath = "./speech2Text/dataset1/" + secure_filename(filename)
     print("In here recognize text with api")
-    data, error = service.convert_to_text(filePath, "wer.txt",api)
-
+    data, error = service.convert_to_text(filePath, "wer.txt", api)
     if data:
         if api == 1:
             return data
@@ -82,7 +98,7 @@ def loadComputedOutput(api):
         f = directory + "/" + filename
         # checking if it is a file
         if os.path.isfile(f):
-            to_add = [f, recognizeText(filename,api)]
+            to_add = [f, recognizeText(filename, api)]
 
             output.append(to_add)
     return output
@@ -190,12 +206,72 @@ def testWER():
 
     print('Accuracy of the Assembly AI api using WER:', modelErr_Assembly)
 
-
-    api = 1 # identificator pentru deep speech
+    api = 1  # identificator pentru deep speech
     modelErr_DeepSpeech = getError(loadRealOutput(), loadComputedOutput(api))
     print('Accuracy of Deep Speech using WER:', modelErr_DeepSpeech)
-    return modelErr_Assembly,modelErr_DeepSpeech
+    return modelErr_Assembly, modelErr_DeepSpeech
 
+def getWordsDict(wordsList):
+    result = {}
+    for elem in wordsList:
+        if str(elem) in result:
+            result[str(elem)] += 1
+        else:
+            result[str(elem)] = 1
+    return result
+
+#words are in order of appearance,document2 should be the original one
+def compare2DocumentsText(wordsInDocument1,wordsInDocument2):
+    result = []
+    index1 = 0
+    index2 = 0
+    lenWordsDoc1 = len(wordsInDocument1)
+    lenWordsDoc2 = len(wordsInDocument2)
+    doc1WordsDict = getWordsDict(wordsInDocument1)
+    doc2WordsDict = getWordsDict(wordsInDocument2)
+
+
+    # document: ,word: ,status: wrong,missing,correct
+    while index1 < lenWordsDoc1 and index2 < lenWordsDoc2:
+        wordDoc2 = wordsInDocument2[index2]
+        wordDoc1 = wordsInDocument1[index1]
+        docWord = DocumentWord()
+        docWord.word = wordDoc2
+
+        if  wordDoc1 == wordDoc2:
+            docWord.status = WordStatus.CORRECT.value
+            doc2WordsDict[wordDoc1] = doc2WordsDict[wordDoc1] - 1
+            doc1WordsDict[wordDoc1] = doc1WordsDict[wordDoc1] - 1
+            index1 += 1
+            index2 += 1
+        else:
+            if (wordDoc1 in doc2WordsDict) and doc2WordsDict[wordDoc1] > 0: # wordDoc1 == wordsInDocument2[index2 + 1]
+                if not(doc1WordsDict[wordDoc1] > 0):
+                    docWord.status = WordStatus.MISSING.value[0]
+                else:
+                    doc1WordsDict[wordDoc1] = doc1WordsDict[wordDoc1]  - 1
+                index2 += 1
+            else:
+                docWord.status = WordStatus.WRONG.value[0]
+                index1 += 1
+                index2 += 1
+        result.append(docWord)
+    while index2 < lenWordsDoc2:
+        docWord = DocumentWord()
+        docWord.word = wordsInDocument2[index2]
+        docWord.status = WordStatus.MISSING.value[0]
+        index2 += 1
+        result.append(docWord)
+    return result
+
+
+def getWordsListFromDocument(documentPath):
+    result = []
+    with open(documentPath, 'r') as file:
+        for line in file:
+            for word in line.split():
+                result.append(word.lower().translate(str.maketrans('', '', string.punctuation)))
+    return result
 
 if __name__ == '__main__':
     app.run()
