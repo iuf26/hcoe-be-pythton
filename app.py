@@ -28,11 +28,8 @@ def uploadfile(section):
         else:
             if api_to_use == "deepgram":
                 data, error = service.convert_to_text(filePath, textConversionResult, 1)
-        # response_file = 'speech2Text/savings/' + textConversionResult + ".txt"
+        os.remove(filePath)
         if data:
-            txtFilename = filename.split(".")[0] + ".txt"
-            realTxtPath = 'speech2Text/translations/' + txtFilename
-            newTestWER(realTxtPath, 'speech2Text/savings/transcription.txt')
             return data
         else:
             return error
