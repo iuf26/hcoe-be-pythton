@@ -1,3 +1,4 @@
+import json
 
 import requests
 import time
@@ -66,7 +67,20 @@ def save_transcript(url, title):
     data, error = get_transcription_result_url(url)
 
     if data:
+        create_json(data['utterances'])
         filename = title + '.txt'
         with open(filename, 'w') as f:
             f.write(data['text'])
-    return data,error
+    return data, error
+
+
+def create_json(transcript_utterances):
+    to_json = []
+    for elem in transcript_utterances:
+        to_json.append(
+            {'text': elem['text'], 'start': elem['start'] / 1000, 'end': elem['end'] / 1000, 'speaker': elem['speaker'],
+             'voicePrints': {}})
+    json_res = json.dumps(to_json, indent=4)
+    with open("json_result.json", "w") as outfile:
+        outfile.write(json_res)
+    return {'data': json_res}
