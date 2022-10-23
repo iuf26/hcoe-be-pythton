@@ -30,10 +30,15 @@ def uploadfile(section):
                 data, error = service.convert_to_text(filePath, textConversionResult, 1)
         os.remove(filePath)
         if data:
+            clear_dir('./speech2Text/audio_cuts')
             return data
         else:
             return error
 
+
+def clear_dir(dir_path):
+    for f in os.listdir(dir_path):
+        os.remove(dir_path+'/'+f)
 
 @app.route('/compare-documents', methods=['POST'])
 def compareDocuments():
