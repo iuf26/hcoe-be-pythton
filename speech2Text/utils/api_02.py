@@ -85,13 +85,13 @@ def create_json(transcript_utterances):
     for elem in transcript_utterances:
         to_json.append(
             {'text': elem['text'], 'start': elem['start'] / 1000, 'end': elem['end'] / 1000, 'speaker': elem['speaker'],
-             'emotion': ''})
+             'voice-emotion': ''})
         audio_chunks_time_list.append((elem['start'] / 1000, elem['end'] / 1000))
 
     emotions = detect_emotion(filename_global, audio_chunks_time_list)
     if len(emotions) == len(to_json):
         for index, elem in enumerate(to_json):
-            to_json[index]['emotion'] = emotions[index]
+            to_json[index]['voice-emotion'] = emotions[index]
 
     json_res = json.dumps(to_json, indent=4)
     with open("json_result.json", "w") as outfile:
