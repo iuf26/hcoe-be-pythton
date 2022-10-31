@@ -6,6 +6,11 @@ from keras.models import model_from_json
 from sklearn.preprocessing import LabelEncoder
 import os
 
+def my_test_voice_emotion(filename):
+    model = load_model()
+    return get_predicted_emotion(model,filename)
+
+
 
 def load_model():
     json_file = open('speech2Text/emotion_audio/model.json', 'r')
@@ -31,13 +36,22 @@ def get_predicted_emotion(model, filename):
         livedf2 = livedf2.stack().to_frame().T
         twodim = np.expand_dims(livedf2, axis=2)
         livepreds = model.predict(twodim, batch_size=32, verbose=1)
-        livepreds1 = livepreds.argmax(axis=1)
-        liveabc = livepreds1.astype(int).flatten()
-        lb = LabelEncoder()
-        # lb.fit()
-        # livepredictions = (lb.inverse_transform((liveabc)))
-        return liveabc.item(0)
-    return -1
+
+        #livepreds1 = livepreds.argmax(axis=1)
+        #liveabc = livepreds1.astype(int).flatten()
+        result = {}
+        labels = ['angry', 'calm', 'fearful', 'happy', 'sad', 'angry','calm', 'fearful', 'happy',  'sad']
+        actualValue = 0
+        for idx,elem in enumerate(livepreds[0]):
+            actualValue = round(float(elem), 8)
+            if labels[idx] in result.keys():
+
+                if result[labels[idx]] < actualValue:
+                    result[labels[idx]] = actualValue
+            else:
+                result[labels[idx]] = actualValue
+        return result
+    return 'undetected'
 
 
 def get_emotion_for_each_cut(directory):

@@ -116,7 +116,6 @@ def save_audio_chunks(filename, audio_chunks_time_list):
 
 def detect_emotion(filename, audio_chunks_time_list):
     save_audio_chunks(filename, audio_chunks_time_list)
-    detected_emotions_number = get_emotion_for_each_cut('speech2Text/audio_cuts')
-    detected_emotions_names = map_emotions(detected_emotions_number)
-    return detected_emotions_names
+    detected_emotions = get_emotion_for_each_cut('speech2Text/audio_cuts')
+    return detected_emotions
 

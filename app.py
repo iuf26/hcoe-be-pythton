@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 import os
 from speech2Text.service import service
 from speech2Text.utils.utility_classes import DocumentWord,WordStatus
+from speech2Text.emotion_audio.detect_emotion import my_test_voice_emotion
 import string
 app = Flask(__name__)
 
@@ -13,13 +14,20 @@ def hello_world():  # put application's code here
     return 'Hello World!'
 
 
+@app.route('/voice-emo')
+def hello_world2():  # put application's code here
+    file = "C:/Users/ifili/Downloads/hcoeProjectMaterials/recordings-s2t/youtube-3.wav"
+    json_string = json.dumps(my_test_voice_emotion(file))
+    return json_string
+
+
 @app.route('/uploadfile/<section>', methods=['GET', 'POST'])
 def uploadfile(section):
     api_to_use = request.view_args['section']
     if request.method == 'POST':
         f = request.files['file']
         filename = f.filename
-        filePath = "./speech2Text/audio/" + secure_filename(filename)
+        filePath = "./speech2Text/dataset1/" + secure_filename(filename)
         f.save(filePath)
         textConversionResult = request.values['destination-file-name']
         data, error = "", ""
